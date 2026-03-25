@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../app/constants.dart';
 
 class SurveyBanner extends StatelessWidget {
   final VoidCallback onTap;
@@ -27,7 +26,7 @@ class SurveyBanner extends StatelessWidget {
             width: 62,
             height: 62,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(.18),
+              color: Colors.white.withValues(alpha: .18),
               borderRadius: BorderRadius.circular(18),
             ),
             child: const Icon(
@@ -62,7 +61,7 @@ class SurveyBanner extends StatelessWidget {
                   child: OutlinedButton(
                     style: OutlinedButton.styleFrom(
                       backgroundColor: Colors.white,
-                      foregroundColor: AppColors.primary,
+                      foregroundColor: Colors.green,
                       side: BorderSide.none,
                     ),
                     onPressed: onTap,

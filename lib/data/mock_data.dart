@@ -2,7 +2,7 @@ import '../models/event_model.dart';
 import '../models/news_model.dart';
 import '../models/notification_model.dart';
 
-List<EventModel> initialMockEvents = [
+final List<EventModel> initialMockEvents = [
   EventModel(
     id: '1',
     title: 'Festival de Música Urbana',
@@ -69,42 +69,22 @@ List<EventModel> initialMockEvents = [
   ),
 ];
 
-List<NotificationModel> initialNotifications = [
-  NotificationModel(
-    id: 'n1',
-    title: 'Nuevo evento disponible',
-    message: 'Ya puedes registrarte al Festival de Música Urbana.',
-    time: 'Hace 5 min',
-  ),
-  NotificationModel(
-    id: 'n2',
-    title: 'Tu registro fue exitoso',
-    message: 'Tu entrada estará disponible en Mis entradas.',
-    time: 'Hace 20 min',
-  ),
-  NotificationModel(
-    id: 'n3',
-    title: 'Consejo Eventia',
-    message: 'Explora la sección de noticias para descubrir tendencias.',
-    time: 'Hace 1 hora',
-    isRead: true,
-  ),
-];
+final List<NotificationModel> initialNotifications = [];
 
-const List<NewsModel> mockNews = [
-  NewsModel(
+final List<NewsModel> initialNews = [
+  const NewsModel(
     title: 'Eventia lanza una nueva experiencia para organizadores',
     description:
         'Una interfaz más limpia y moderna para crear, administrar y compartir eventos.',
     tag: 'Actualización',
   ),
-  NewsModel(
+  const NewsModel(
     title: 'Los eventos híbridos siguen creciendo',
     description:
         'Cada vez más personas buscan experiencias que mezclen lo presencial con lo virtual.',
     tag: 'Tendencias',
   ),
-  NewsModel(
+  const NewsModel(
     title: '5 claves para mejorar la experiencia del asistente',
     description:
         'Desde check-in con QR hasta encuestas de satisfacción, estos detalles elevan mucho la calidad.',

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
-import '../../app/constants.dart';
 import '../../data/app_state.dart';
 import '../../models/event_model.dart';
 import '../auth/login_screen.dart';
@@ -20,7 +19,7 @@ class EventDetailScreen extends StatelessWidget {
 
     return AnimatedBuilder(
       animation: AppState.instance,
-      builder: (context, _) {
+      builder: (context, child) {
         final appState = AppState.instance;
         final alreadyRegistered = appState.isRegisteredToEvent(event.id);
 
@@ -42,14 +41,14 @@ class EventDetailScreen extends StatelessWidget {
                     Image.network(
                       event.imageUrl,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) {
+                      errorBuilder: (context, error, stackTrace) {
                         return Container(
-                          color: AppColors.softGreen,
+                          color: Colors.green.shade50,
                           child: const Center(
                             child: Icon(
                               Icons.image_outlined,
                               size: 56,
-                              color: AppColors.primary,
+                              color: Colors.green,
                             ),
                           ),
                         );
@@ -59,8 +58,8 @@ class EventDetailScreen extends StatelessWidget {
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: [
-                            Colors.black.withOpacity(0.08),
-                            Colors.black.withOpacity(0.58),
+                            Colors.black.withValues(alpha: 0.08),
+                            Colors.black.withValues(alpha: 0.58),
                           ],
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
@@ -78,16 +77,14 @@ class EventDetailScreen extends StatelessWidget {
                               vertical: 8,
                             ),
                             decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.95),
+                              color: Colors.white.withValues(alpha: 0.95),
                               borderRadius: BorderRadius.circular(18),
                             ),
                             child: Text(
                               event.isFree ? 'GRATIS' : 'PAGO',
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
-                                color: event.isFree
-                                    ? AppColors.primary
-                                    : Colors.deepOrange,
+                                color: event.isFree ? Colors.green : Colors.deepOrange,
                               ),
                             ),
                           ),
@@ -98,7 +95,7 @@ class EventDetailScreen extends StatelessWidget {
                               vertical: 8,
                             ),
                             decoration: BoxDecoration(
-                              color: AppColors.primary.withOpacity(.92),
+                              color: Colors.green.withValues(alpha: .92),
                               borderRadius: BorderRadius.circular(18),
                             ),
                             child: Text(
@@ -124,10 +121,7 @@ class EventDetailScreen extends StatelessWidget {
                             style: Theme.of(context)
                                 .textTheme
                                 .titleLarge
-                                ?.copyWith(
-                                  fontSize: 28,
-                                  color: Colors.white,
-                                ),
+                                ?.copyWith(fontSize: 28, color: Colors.white),
                           ),
                           const SizedBox(height: 8),
                           Text(
@@ -147,7 +141,7 @@ class EventDetailScreen extends StatelessWidget {
               Row(
                 children: [
                   const Icon(Icons.location_on_rounded,
-                      color: AppColors.primary, size: 18),
+                      color: Colors.green, size: 18),
                   const SizedBox(width: 8),
                   Expanded(child: Text('${event.location} • ${event.distance}')),
                 ],
@@ -156,7 +150,7 @@ class EventDetailScreen extends StatelessWidget {
               Row(
                 children: [
                   const Icon(Icons.person_outline_rounded,
-                      color: AppColors.primary, size: 18),
+                      color: Colors.green, size: 18),
                   const SizedBox(width: 8),
                   Expanded(child: Text('Organiza: ${event.organizer}')),
                 ],
@@ -185,25 +179,47 @@ class EventDetailScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 18),
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(18),
-                  child: Column(
-                    children: [
-                      QrImageView(
-                        data: qrData,
-                        version: QrVersions.auto,
-                        size: 210,
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        'Código QR de acceso',
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                    ],
+              if (alreadyRegistered)
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(18),
+                    child: Column(
+                      children: [
+                        QrImageView(
+                          data: qrData,
+                          version: QrVersions.auto,
+                          size: 210,
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          'Código QR de acceso',
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              else
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(18),
+                    child: Column(
+                      children: [
+                        const Icon(
+                          Icons.qr_code_2_rounded,
+                          size: 52,
+                          color: Colors.grey,
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          'Regístrate en este evento para generar tu código QR de acceso.',
+                          textAlign: TextAlign.center,
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
               const SizedBox(height: 18),
               FilledButton(
                 onPressed: () {

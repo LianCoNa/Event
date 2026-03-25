@@ -1,31 +1,32 @@
 import 'package:flutter/material.dart';
-import '../../app/constants.dart';
-import '../../app/routes.dart';
 import '../../data/app_state.dart';
-import '../../widgets/primary_button.dart';
 import '../auth/login_screen.dart';
 import '../auth/register_screen.dart';
+import '../events/create_event_screen.dart';
+import '../events/my_events_screen.dart';
+import '../news/create_news_screen.dart';
+import '../news/news_screen.dart';
+import '../events/stats_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
 
-  Widget option(
-    BuildContext context,
-    String title,
-    IconData icon,
-    String route,
-  ) {
+  Widget optionTile({
+    required BuildContext context,
+    required String title,
+    required IconData icon,
+    required Widget page,
+  }) {
     return Card(
       child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
-        leading: CircleAvatar(
-          backgroundColor: AppColors.softGreen,
-          child: Icon(icon, color: AppColors.primary),
-        ),
+        leading: Icon(icon, color: Colors.green),
         title: Text(title),
-        trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 18),
+        trailing: const Icon(Icons.chevron_right_rounded),
         onTap: () {
-          Navigator.pushNamed(context, route);
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => page),
+          );
         },
       ),
     );
@@ -35,61 +36,44 @@ class ProfileScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: AppState.instance,
-      builder: (context, _) {
+      builder: (context, child) {
         final appState = AppState.instance;
 
         if (!appState.isLoggedIn) {
           return Scaffold(
             appBar: AppBar(title: const Text('Perfil')),
-            body: ListView(
+            body: Padding(
               padding: const EdgeInsets.all(20),
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(28),
+              child: ListView(
+                children: [
+                  const SizedBox(height: 30),
+                  const CircleAvatar(
+                    radius: 42,
+                    child: Icon(Icons.person_outline, size: 42),
                   ),
-                  child: Column(
-                    children: [
-                      const CircleAvatar(
-                        radius: 42,
-                        backgroundColor: AppColors.softGreen,
-                        child: Icon(
-                          Icons.person_outline_rounded,
-                          size: 42,
-                          color: AppColors.primary,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Tu perfil en Eventia',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(fontSize: 24),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Inicia sesión o crea una cuenta para ver tus entradas y gestionar tus eventos.',
-                        textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(height: 1.5),
-                      ),
-                    ],
+                  const SizedBox(height: 18),
+                  Text(
+                    'Bienvenido',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.titleLarge,
                   ),
-                ),
-                const SizedBox(height: 22),
-                PrimaryButton(
-                  text: 'Iniciar sesión',
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const LoginScreen()),
-                    );
-                  },
-                ),
-                const SizedBox(height: 14),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton(
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Inicia sesión o crea una cuenta para acceder a más funciones.',
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 24),
+                  FilledButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const LoginScreen()),
+                      );
+                    },
+                    child: const Text('Iniciar sesión'),
+                  ),
+                  const SizedBox(height: 12),
+                  OutlinedButton(
                     onPressed: () {
                       Navigator.push(
                         context,
@@ -98,66 +82,15 @@ class ProfileScreen extends StatelessWidget {
                     },
                     child: const Text('Crear cuenta'),
                   ),
-                ),
-              ],
-            ),
-          );
-        }
-
-        if (appState.isAdmin) {
-          return Scaffold(
-            appBar: AppBar(title: const Text('Panel administrador')),
-            body: ListView(
-              padding: const EdgeInsets.all(20),
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(22),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(28),
+                  const SizedBox(height: 24),
+                  optionTile(
+                    context: context,
+                    title: 'Noticias',
+                    icon: Icons.newspaper_outlined,
+                    page: const NewsScreen(),
                   ),
-                  child: Column(
-                    children: [
-                      const CircleAvatar(
-                        radius: 42,
-                        backgroundColor: AppColors.softGreen,
-                        child: Icon(Icons.admin_panel_settings_rounded,
-                            size: 42, color: AppColors.primary),
-                      ),
-                      const SizedBox(height: 14),
-                      Text(
-                        'Administrador',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(fontSize: 24),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Control total de la aplicación',
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 18),
-                option(context, 'Crear evento', Icons.add_circle_outline, AppRoutes.createEvent),
-                const SizedBox(height: 12),
-                option(context, 'Administrar eventos', Icons.event_note_outlined, AppRoutes.myEvents),
-                const SizedBox(height: 12),
-                option(context, 'Ver estadísticas', Icons.bar_chart_rounded, AppRoutes.stats),
-                const SizedBox(height: 12),
-                option(context, 'Ver encuestas', Icons.assignment_outlined, AppRoutes.survey),
-                const SizedBox(height: 12),
-                option(context, 'Noticias', Icons.article_outlined, AppRoutes.news),
-                const SizedBox(height: 18),
-                FilledButton(
-                  onPressed: () {
-                    AppState.instance.logout();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Sesión cerrada')),
-                    );
-                  },
-                  child: const Text('Cerrar sesión'),
-                ),
-              ],
+                ],
+              ),
             ),
           );
         }
@@ -167,44 +100,59 @@ class ProfileScreen extends StatelessWidget {
           body: ListView(
             padding: const EdgeInsets.all(20),
             children: [
-              Container(
-                padding: const EdgeInsets.all(22),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(28),
-                ),
-                child: Column(
-                  children: [
-                    const CircleAvatar(
-                      radius: 42,
-                      backgroundColor: AppColors.softGreen,
-                      child: Icon(Icons.person, size: 42, color: AppColors.primary),
-                    ),
-                    const SizedBox(height: 14),
-                    Text(
-                      appState.userName,
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(fontSize: 24),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Usuario activo',
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                  ],
-                ),
+              const SizedBox(height: 10),
+              CircleAvatar(
+                radius: 42,
+                backgroundColor: Colors.green.shade50,
+                child: const Icon(Icons.person, size: 42, color: Colors.green),
               ),
-              const SizedBox(height: 18),
-              option(context, 'Crear evento', Icons.add_circle_outline, AppRoutes.createEvent),
-              const SizedBox(height: 12),
-              option(context, 'Mis eventos', Icons.event_note_outlined, AppRoutes.myEvents),
-              const SizedBox(height: 12),
-              option(context, 'Estadísticas', Icons.bar_chart_rounded, AppRoutes.stats),
-              const SizedBox(height: 12),
-              option(context, 'Encuesta de satisfacción', Icons.star_outline_rounded, AppRoutes.survey),
-              const SizedBox(height: 12),
-              option(context, 'Noticias', Icons.article_outlined, AppRoutes.news),
-              const SizedBox(height: 18),
-              FilledButton(
+              const SizedBox(height: 16),
+              Text(
+                appState.userName,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 6),
+              Text(
+                appState.userEmail,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.black54),
+              ),
+              const SizedBox(height: 24),
+              optionTile(
+                context: context,
+                title: 'Mis eventos',
+                icon: Icons.event_note_rounded,
+                page: const MyEventsScreen(),
+              ),
+              optionTile(
+                context: context,
+                title: 'Crear evento',
+                icon: Icons.add_circle_outline_rounded,
+                page: const CreateEventScreen(),
+              ),
+              optionTile(
+                context: context,
+                title: 'Noticias',
+                icon: Icons.newspaper_outlined,
+                page: const NewsScreen(),
+              ),
+              if (appState.isAdmin)
+                optionTile(
+                  context: context,
+                  title: 'Crear noticia',
+                  icon: Icons.campaign_outlined,
+                  page: const CreateNewsScreen(),
+                ),
+              if (appState.isAdmin)
+                optionTile(
+                  context: context, 
+                  title: 'Estadístcas', 
+                  icon: Icons.bar_chart_rounded, 
+                  page: const StatsScreen()
+                  ),
+              const SizedBox(height: 20),
+              FilledButton.tonal(
                 onPressed: () {
                   AppState.instance.logout();
                   ScaffoldMessenger.of(context).showSnackBar(

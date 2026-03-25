@@ -10,7 +10,7 @@ class MyEventsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: AppState.instance,
-      builder: (context, _) {
+      builder: (context, child) {
         final myEvents = AppState.instance.myCreatedEvents;
         final isAdmin = AppState.instance.isAdmin;
         final visibleEvents = isAdmin ? AppState.instance.allEvents : myEvents;
@@ -34,7 +34,8 @@ class MyEventsScreen extends StatelessWidget {
               : ListView.separated(
                   padding: const EdgeInsets.all(20),
                   itemCount: visibleEvents.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 14),
+                  separatorBuilder: (context, index) =>
+                      const SizedBox(height: 14),
                   itemBuilder: (context, index) {
                     final event = visibleEvents[index];
 
@@ -56,9 +57,10 @@ class MyEventsScreen extends StatelessWidget {
                                   child: Image.network(
                                     event.imageUrl,
                                     fit: BoxFit.cover,
-                                    errorBuilder: (_, __, ___) => const Icon(
+                                    errorBuilder: (context, error, stackTrace) =>
+                                        const Icon(
                                       Icons.image_outlined,
-                                      color: Color(0xFF2E7D32),
+                                      color: Colors.green,
                                     ),
                                   ),
                                 ),
@@ -81,7 +83,7 @@ class MyEventsScreen extends StatelessWidget {
                                         style: TextStyle(
                                           fontWeight: FontWeight.bold,
                                           color: event.isFree
-                                              ? const Color(0xFF2E7D32)
+                                              ? Colors.green
                                               : Colors.deepOrange,
                                         ),
                                       ),
@@ -99,7 +101,8 @@ class MyEventsScreen extends StatelessWidget {
                                       Navigator.push(
                                         context,
                                         MaterialPageRoute(
-                                          builder: (_) => EventDetailScreen(event: event),
+                                          builder: (_) =>
+                                              EventDetailScreen(event: event),
                                         ),
                                       );
                                     },
@@ -113,7 +116,8 @@ class MyEventsScreen extends StatelessWidget {
                                       Navigator.push(
                                         context,
                                         MaterialPageRoute(
-                                          builder: (_) => EditEventScreen(event: event),
+                                          builder: (_) =>
+                                              EditEventScreen(event: event),
                                         ),
                                       );
                                     },
@@ -126,7 +130,9 @@ class MyEventsScreen extends StatelessWidget {
                                     onPressed: () {
                                       AppState.instance.deleteCreatedEvent(event.id);
                                       ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(content: Text('Evento eliminado')),
+                                        const SnackBar(
+                                          content: Text('Evento eliminado'),
+                                        ),
                                       );
                                     },
                                     child: const Text('Eliminar'),

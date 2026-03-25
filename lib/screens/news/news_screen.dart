@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../data/mock_data.dart';
-import '../../app/constants.dart';
+import '../../data/app_state.dart';
+import '../../models/news_model.dart';
 
 class NewsScreen extends StatelessWidget {
   const NewsScreen({super.key});
@@ -8,59 +8,81 @@ class NewsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Noticias')),
-      body: ListView.separated(
-        padding: const EdgeInsets.all(20),
-        itemCount: mockNews.length,
-        separatorBuilder: (_, __) => const SizedBox(height: 14),
-        itemBuilder: (context, index) {
-          final item = mockNews[index];
+      appBar: AppBar(
+        title: const Text('Noticias'),
+      ),
+      body: AnimatedBuilder(
+        animation: AppState.instance,
+        builder: (context, child) {
+          final List<NewsModel> news = AppState.instance.news;
 
-          return Card(
-            child: Padding(
-              padding: const EdgeInsets.all(18),
-              child: Row(
-                children: [
-                  Container(
-                    width: 58,
-                    height: 58,
-                    decoration: BoxDecoration(
-                      color: AppColors.softGreen,
-                      borderRadius: BorderRadius.circular(16),
+          if (news.isEmpty) {
+            return const Center(
+              child: Text('No hay noticias disponibles'),
+            );
+          }
+
+          return ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: news.length,
+            itemBuilder: (context, index) {
+              final item = news[index];
+
+              return Container(
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.05),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
                     ),
-                    child: const Icon(
-                      Icons.article_rounded,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
+                  ],
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.green.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
                           item.tag,
                           style: const TextStyle(
-                            color: AppColors.primary,
-                            fontWeight: FontWeight.w700,
+                            color: Colors.green,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
-                        const SizedBox(height: 6),
-                        Text(
-                          item.title,
-                          style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        item.title,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
                         ),
-                        const SizedBox(height: 6),
-                        Text(
-                          item.description,
-                          style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        item.description,
+                        style: const TextStyle(
+                          color: Colors.black54,
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            ),
+                ),
+              );
+            },
           );
         },
       ),

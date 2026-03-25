@@ -1,3 +1,4 @@
+import 'package:eventia/screens/news/create_news_screen.dart';
 import 'package:flutter/material.dart';
 import '../screens/auth/forgot_password_screen.dart';
 import '../screens/auth/login_screen.dart';
@@ -25,6 +26,7 @@ class AppRoutes {
   static const String profile = '/profile';
   static const String allEvents = '/all-events';
   static const String notifications = '/notifications';
+  static const String createNews = '/create-news';
 
   static Map<String, WidgetBuilder> get routes => {
         forgotPassword: (_) => const ForgotPasswordScreen(),
@@ -39,5 +41,6 @@ class AppRoutes {
         profile: (_) => const ProfileScreen(),
         allEvents: (_) => const AllEventsScreen(),
         notifications: (_) => const NotificationsScreen(),
+        createNews: (_) => const CreateNewsScreen(),
       };
 }

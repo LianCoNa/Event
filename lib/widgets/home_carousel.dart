@@ -1,9 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import '../app/constants.dart';
 
 class HomeCarousel extends StatefulWidget {
-  HomeCarousel({super.key});
+  const HomeCarousel({super.key});
 
   @override
   State<HomeCarousel> createState() => _HomeCarouselState();
@@ -16,14 +15,14 @@ class _HomeCarouselState extends State<HomeCarousel> {
 
   final List<Map<String, dynamic>> banners = const [
     {
-      'title': 'Descubre eventos\npremium en tu ciudad',
+      'title': 'Descubre eventos\nen tu ciudad',
       'subtitle': 'Encuentra experiencias únicas y regístrate en segundos.',
       'icon': Icons.celebration_rounded,
       'colors': [Color(0xFF8FD19A), Color(0xFFDDF3E1)],
     },
     {
       'title': 'Organiza tus eventos\ncon estilo',
-      'subtitle': 'Crea, administra y comparte eventos desde Eventia.',
+      'subtitle': 'Crea y administra eventos desde Eventia.',
       'icon': Icons.event_available_rounded,
       'colors': [Color(0xFF66BB6A), Color(0xFFC8E6C9)],
     },
@@ -91,7 +90,7 @@ class _HomeCarouselState extends State<HomeCarousel> {
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.06),
+                      color: Colors.black.withValues(alpha: 0.06),
                       blurRadius: 14,
                       offset: const Offset(0, 6),
                     ),
@@ -128,7 +127,7 @@ class _HomeCarouselState extends State<HomeCarousel> {
                       const SizedBox(width: 12),
                       CircleAvatar(
                         radius: 34,
-                        backgroundColor: Colors.white.withOpacity(.18),
+                        backgroundColor: Colors.white.withValues(alpha: .18),
                         child: Icon(
                           banner['icon'],
                           size: 38,
@@ -154,8 +153,8 @@ class _HomeCarouselState extends State<HomeCarousel> {
               height: 8,
               decoration: BoxDecoration(
                 color: currentIndex == index
-                    ? AppColors.primary
-                    : AppColors.primary.withOpacity(0.25),
+                    ? Colors.green
+                    : Colors.green.withValues(alpha: 0.25),
                 borderRadius: BorderRadius.circular(20),
               ),
             ),

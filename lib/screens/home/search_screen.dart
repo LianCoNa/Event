@@ -23,13 +23,13 @@ class _SearchScreenState extends State<SearchScreen> {
     results = AppState.instance.allEvents;
   }
 
-  void _search(String value) {
+  void search(String value) {
     setState(() {
       results = AppState.instance.searchEvents(value);
     });
   }
 
-  void _handleRegister(BuildContext context, EventModel event) {
+  void handleRegister(BuildContext context, EventModel event) {
     final appState = AppState.instance;
 
     if (!appState.isLoggedIn) {
@@ -45,60 +45,56 @@ class _SearchScreenState extends State<SearchScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Te registraste en ${event.title}')),
       );
-      setState(() {});
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Buscar')),
-      body: ListView(
-        padding: const EdgeInsets.all(20),
-        children: [
-          SearchBarWidget(
-            hintText: 'Busca música, negocios, diseño...',
-            controller: controller,
-            onChanged: _search,
-          ),
-          const SizedBox(height: 20),
-          Text(
-            'Resultados',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(fontSize: 24),
-          ),
-          const SizedBox(height: 14),
-          if (results.isEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 40),
-              child: Center(
-                child: Text(
-                  'No encontramos eventos con esa búsqueda.',
-                  style: Theme.of(context).textTheme.titleMedium,
+    return AnimatedBuilder(
+      animation: AppState.instance,
+      builder: (context, child) {
+        return Scaffold(
+          appBar: AppBar(title: const Text('Buscar eventos')),
+          body: ListView(
+            padding: const EdgeInsets.all(20),
+            children: [
+              SearchBarWidget(
+                hintText: 'Busca por nombre, categoría, ubicación...',
+                controller: controller,
+                onChanged: search,
+              ),
+              const SizedBox(height: 20),
+              if (results.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.only(top: 50),
+                  child: Center(
+                    child: Text('No se encontraron eventos'),
+                  ),
+                ),
+              ...results.map(
+                (event) => Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: EventCard(
+                    event: event,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => EventDetailScreen(event: event),
+                        ),
+                      );
+                    },
+                    onRegister: () => handleRegister(context, event),
+                    actionText: AppState.instance.isRegisteredToEvent(event.id)
+                        ? 'Registrado'
+                        : 'Registrarte',
+                  ),
                 ),
               ),
-            ),
-          ...results.map(
-            (event) => Padding(
-              padding: const EdgeInsets.only(bottom: 14),
-              child: EventCard(
-                event: event,
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => EventDetailScreen(event: event),
-                    ),
-                  );
-                },
-                onRegister: () => _handleRegister(context, event),
-                actionText: AppState.instance.isRegisteredToEvent(event.id)
-                    ? 'Registrado'
-                    : 'Registrarte',
-              ),
-            ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

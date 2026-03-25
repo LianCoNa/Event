@@ -12,27 +12,33 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+  final _formKey = GlobalKey<FormState>();
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
 
   bool obscurePassword = true;
   bool rememberMe = false;
+  bool isLoading = false;
+  AutovalidateMode autoValidateMode = AutovalidateMode.disabled;
 
-  void login() {
-    final email = emailController.text.trim();
-    final password = passwordController.text.trim();
-
-    if (email.isEmpty || password.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Completa correo y contraseña')),
-      );
+  Future<void> login() async {
+    if (!_formKey.currentState!.validate()) {
+      setState(() {
+        autoValidateMode = AutovalidateMode.onUserInteraction;
+      });
       return;
     }
 
+    setState(() => isLoading = true);
+    await Future.delayed(const Duration(milliseconds: 700));
+
     final success = AppState.instance.login(
-      email: email,
-      password: password,
+      email: emailController.text.trim(),
+      password: passwordController.text.trim(),
     );
+
+    if (!mounted) return;
+    setState(() => isLoading = false);
 
     if (!success) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -57,80 +63,101 @@ class _LoginScreenState extends State<LoginScreen> {
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24),
-          child: ListView(
-            children: [
-              const SizedBox(height: 20),
-              Text(
-                'Iniciar sesión',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontSize: 30,
-                    ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Ingresa para descubrir y gestionar tus eventos.',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-              const SizedBox(height: 28),
-              TextField(
-                controller: emailController,
-                keyboardType: TextInputType.emailAddress,
-                decoration: const InputDecoration(
-                  hintText: 'Correo electrónico',
-                  prefixIcon: Icon(Icons.email_outlined),
+          child: Form(
+            key: _formKey,
+            autovalidateMode: autoValidateMode,
+            child: ListView(
+              children: [
+                const SizedBox(height: 20),
+                Text(
+                  'Iniciar sesión',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(fontSize: 30),
                 ),
-              ),
-              const SizedBox(height: 14),
-              TextField(
-                controller: passwordController,
-                obscureText: obscurePassword,
-                decoration: InputDecoration(
-                  hintText: 'Contraseña',
-                  prefixIcon: const Icon(Icons.lock_outline),
-                  suffixIcon: IconButton(
-                    onPressed: () {
-                      setState(() {
-                        obscurePassword = !obscurePassword;
-                      });
-                    },
-                    icon: Icon(
-                      obscurePassword ? Icons.visibility_off : Icons.visibility,
+                const SizedBox(height: 8),
+                Text(
+                  'Ingresa para descubrir y gestionar tus eventos.',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+                const SizedBox(height: 28),
+                TextFormField(
+                  controller: emailController,
+                  keyboardType: TextInputType.emailAddress,
+                  decoration: const InputDecoration(
+                    hintText: 'Correo electrónico',
+                    prefixIcon: Icon(Icons.email_outlined),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Ingresa tu correo';
+                    }
+                    if (!value.contains('@')) {
+                      return 'Correo inválido';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 14),
+                TextFormField(
+                  controller: passwordController,
+                  obscureText: obscurePassword,
+                  decoration: InputDecoration(
+                    hintText: 'Contraseña',
+                    prefixIcon: const Icon(Icons.lock_outline),
+                    suffixIcon: IconButton(
+                      onPressed: () {
+                        setState(() {
+                          obscurePassword = !obscurePassword;
+                        });
+                      },
+                      icon: Icon(
+                        obscurePassword ? Icons.visibility_off : Icons.visibility,
+                      ),
                     ),
                   ),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Ingresa tu contraseña';
+                    }
+                    if (value.trim().length < 6) {
+                      return 'Mínimo 6 caracteres';
+                    }
+                    return null;
+                  },
                 ),
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Checkbox(
-                    value: rememberMe,
-                    onChanged: (value) {
-                      setState(() {
-                        rememberMe = value ?? false;
-                      });
-                    },
-                  ),
-                  const Text('Recordar contraseña'),
-                  const Spacer(),
-                  TextButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const ForgotPasswordScreen(),
-                        ),
-                      );
-                    },
-                    child: const Text('¿Olvidaste tu contraseña?'),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 18),
-              PrimaryButton(
-                text: 'Entrar',
-                onPressed: login,
-              ),
-            ],
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Checkbox(
+                      value: rememberMe,
+                      onChanged: (value) {
+                        setState(() {
+                          rememberMe = value ?? false;
+                        });
+                      },
+                    ),
+                    const Text('Recordar contraseña'),
+                    const Spacer(),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const ForgotPasswordScreen(),
+                          ),
+                        );
+                      },
+                      child: const Text('¿Olvidaste tu contraseña?'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 18),
+                PrimaryButton(
+                  text: 'Entrar',
+                  isLoading: isLoading,
+                  onPressed: login,
+                ),
+              ],
+            ),
           ),
         ),
       ),
