@@ -1,5 +1,6 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import '../../data/app_state.dart';
+import '../../services/survey_service.dart';
 import '../../widgets/primary_button.dart';
 
 class SurveyScreen extends StatefulWidget {
@@ -18,6 +19,12 @@ class _SurveyScreenState extends State<SurveyScreen> {
   bool isLoading = false;
   AutovalidateMode autoValidateMode = AutovalidateMode.disabled;
 
+  @override
+  void dispose() {
+    improvementController.dispose();
+    super.dispose();
+  }
+
   Future<void> submitSurvey() async {
     if (!_formKey.currentState!.validate()) {
       setState(() {
@@ -26,23 +33,42 @@ class _SurveyScreenState extends State<SurveyScreen> {
       return;
     }
 
+    final firebaseUser = FirebaseAuth.instance.currentUser;
+    if (firebaseUser == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Debes iniciar sesión')),
+      );
+      return;
+    }
+
     setState(() => isLoading = true);
-    await Future.delayed(const Duration(milliseconds: 700));
 
-    AppState.instance.submitSurvey(
-      wouldHireAgain: wouldHireAgain == 'Sí',
-      rating: rating,
-      improvement: improvementController.text.trim(),
-    );
+    try {
+      await SurveyService.instance.submitSurvey(
+        userId: firebaseUser.uid,
+        wouldHireAgain: wouldHireAgain == 'Sí',
+        rating: rating,
+        improvement: improvementController.text.trim(),
+      );
 
-    if (!mounted) return;
-    setState(() => isLoading = false);
+      if (!mounted) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Encuesta enviada correctamente')),
-    );
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Encuesta enviada correctamente')),
+      );
 
-    Navigator.pop(context);
+      Navigator.pop(context);
+    } catch (_) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No se pudo enviar la encuesta')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => isLoading = false);
+      }
+    }
   }
 
   Widget sectionTitle(String text) {
@@ -56,12 +82,6 @@ class _SurveyScreenState extends State<SurveyScreen> {
         ),
       ),
     );
-  }
-
-  @override
-  void dispose() {
-    improvementController.dispose();
-    super.dispose();
   }
 
   @override
@@ -83,7 +103,6 @@ class _SurveyScreenState extends State<SurveyScreen> {
             style: Theme.of(context).textTheme.bodyMedium,
           ),
           const SizedBox(height: 24),
-
           sectionTitle('¿Volverías a contratar nuestros servicios?'),
           SegmentedButton<String>(
             segments: const [
@@ -105,9 +124,7 @@ class _SurveyScreenState extends State<SurveyScreen> {
               });
             },
           ),
-
           const SizedBox(height: 24),
-
           sectionTitle('¿Cómo evalúas la calidad de nuestros servicios?'),
           Card(
             child: Padding(
@@ -134,9 +151,7 @@ class _SurveyScreenState extends State<SurveyScreen> {
               ),
             ),
           ),
-
           const SizedBox(height: 24),
-
           sectionTitle('¿Tienes alguna propuesta de mejora sugerida?'),
           Form(
             key: _formKey,
@@ -156,9 +171,7 @@ class _SurveyScreenState extends State<SurveyScreen> {
               },
             ),
           ),
-
           const SizedBox(height: 24),
-
           PrimaryButton(
             text: 'Enviar encuesta',
             isLoading: isLoading,

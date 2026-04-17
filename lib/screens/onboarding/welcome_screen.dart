@@ -1,113 +1,128 @@
 import 'package:flutter/material.dart';
-import '../../app/constants.dart';
-import '../../app/routes.dart';
 import '../../widgets/primary_button.dart';
+import '../auth/login_screen.dart';
+import '../auth/register_screen.dart';
 
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});
 
+  Route _buildRoute(Widget page) {
+    return PageRouteBuilder(
+      transitionDuration: const Duration(milliseconds: 360),
+      pageBuilder: (_, animation, __) => FadeTransition(
+        opacity: animation,
+        child: page,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Spacer(),
-              Text(
-                'Eventia',
-                style: Theme.of(context).textTheme.displayMedium?.copyWith(
-                      color: AppColors.primary,
-                      fontSize: 44,
-                    ),
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          Image.network(
+            'https://images.unsplash.com/photo-1511578314322-379afb476865?q=80&w=1600&auto=format&fit=crop',
+            fit: BoxFit.cover,
+          ),
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  Colors.green.shade900.withValues(alpha: 0.20),
+                  Colors.green.shade700.withValues(alpha: 0.45),
+                  Colors.green.shade500.withValues(alpha: 0.78),
+                ],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
               ),
-              const SizedBox(height: 14),
-              Text(
-                'Descubre y organiza eventos\ncon una experiencia moderna.',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontSize: 28,
-                      height: 1.2,
+            ),
+          ),
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Spacer(),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 8,
                     ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'Regístrate para crear eventos, explorar actividades y recibir tu acceso con código QR.',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.18),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.15),
+                      ),
+                    ),
+                    child: const Text(
+                      'Bienvenido a Eventia',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  const Text(
+                    'Organiza,\nconecta y vive\nmejores eventos',
+                    style: TextStyle(
+                      fontSize: 38,
+                      height: 1.1,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  const Text(
+                    'Descubre experiencias, crea eventos increíbles y administra todo desde una sola app.',
+                    style: TextStyle(
                       fontSize: 15,
                       height: 1.5,
+                      color: Colors.white70,
                     ),
-              ),
-              const SizedBox(height: 30),
-              Container(
-                height: 260,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(30),
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFFBFE8C3), Color(0xFFEAF7EB)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
                   ),
-                ),
-                child: Stack(
-                  children: [
-                    Positioned(
-                      top: 30,
-                      left: 30,
-                      child: Container(
-                        width: 70,
-                        height: 70,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.35),
-                          shape: BoxShape.circle,
-                        ),
+                  const SizedBox(height: 30),
+                  PrimaryButton(
+                    text: 'Iniciar sesión',
+                    icon: Icons.login_rounded,
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        _buildRoute(const LoginScreen()),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  OutlinedButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        _buildRoute(const RegisterScreen()),
+                      );
+                    },
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.white,
+                      side: BorderSide(
+                        color: Colors.white.withValues(alpha: 0.45),
                       ),
-                    ),
-                    Positioned(
-                      right: 25,
-                      bottom: 25,
-                      child: Container(
-                        width: 90,
-                        height: 90,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.25),
-                          shape: BoxShape.circle,
-                        ),
+                      minimumSize: const Size.fromHeight(56),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(18),
                       ),
+                      backgroundColor: Colors.white.withValues(alpha: 0.04),
                     ),
-                    const Center(
-                      child: Icon(
-                        Icons.celebration_rounded,
-                        size: 110,
-                        color: AppColors.primary,
-                      ),
-                    ),
-                  ],
-                ),
+                    child: const Text('Crear cuenta'),
+                  ),
+                  const SizedBox(height: 26),
+                ],
               ),
-              const Spacer(),
-              PrimaryButton(
-                text: 'Iniciar sesión',
-                onPressed: () {
-                  Navigator.pushNamed(context, AppRoutes.login);
-                },
-              ),
-              const SizedBox(height: 14),
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton(
-                  onPressed: () {
-                    Navigator.pushNamed(context, AppRoutes.register);
-                  },
-                  child: const Text('Crear cuenta'),
-                ),
-              ),
-              const SizedBox(height: 18),
-            ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }

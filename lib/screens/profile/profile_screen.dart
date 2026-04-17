@@ -1,12 +1,14 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import '../../data/app_state.dart';
+import '../../services/auth_service.dart';
+import '../../services/notification_service.dart';
 import '../auth/login_screen.dart';
 import '../auth/register_screen.dart';
 import '../events/create_event_screen.dart';
 import '../events/my_events_screen.dart';
+import '../events/stats_screen.dart';
 import '../news/create_news_screen.dart';
 import '../news/news_screen.dart';
-import '../events/stats_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -34,12 +36,12 @@ class ProfileScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: AppState.instance,
-      builder: (context, child) {
-        final appState = AppState.instance;
+    return StreamBuilder<User?>(
+      stream: AuthService.instance.authStateChanges,
+      builder: (context, authSnapshot) {
+        final firebaseUser = authSnapshot.data;
 
-        if (!appState.isLoggedIn) {
+        if (firebaseUser == null) {
           return Scaffold(
             appBar: AppBar(title: const Text('Perfil')),
             body: Padding(
@@ -47,9 +49,14 @@ class ProfileScreen extends StatelessWidget {
               child: ListView(
                 children: [
                   const SizedBox(height: 30),
-                  const CircleAvatar(
-                    radius: 42,
-                    child: Icon(Icons.person_outline, size: 42),
+                  CircleAvatar(
+                    radius: 48,
+                    backgroundColor: Colors.green.shade50,
+                    child: const Icon(
+                      Icons.person_outline_rounded,
+                      size: 42,
+                      color: Colors.green,
+                    ),
                   ),
                   const SizedBox(height: 18),
                   Text(
@@ -95,74 +102,164 @@ class ProfileScreen extends StatelessWidget {
           );
         }
 
-        return Scaffold(
-          appBar: AppBar(title: const Text('Perfil')),
-          body: ListView(
-            padding: const EdgeInsets.all(20),
-            children: [
-              const SizedBox(height: 10),
-              CircleAvatar(
-                radius: 42,
-                backgroundColor: Colors.green.shade50,
-                child: const Icon(Icons.person, size: 42, color: Colors.green),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                appState.userName,
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-              const SizedBox(height: 6),
-              Text(
-                appState.userEmail,
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.black54),
-              ),
-              const SizedBox(height: 24),
-              optionTile(
-                context: context,
-                title: 'Mis eventos',
-                icon: Icons.event_note_rounded,
-                page: const MyEventsScreen(),
-              ),
-              optionTile(
-                context: context,
-                title: 'Crear evento',
-                icon: Icons.add_circle_outline_rounded,
-                page: const CreateEventScreen(),
-              ),
-              optionTile(
-                context: context,
-                title: 'Noticias',
-                icon: Icons.newspaper_outlined,
-                page: const NewsScreen(),
-              ),
-              if (appState.isAdmin)
-                optionTile(
-                  context: context,
-                  title: 'Crear noticia',
-                  icon: Icons.campaign_outlined,
-                  page: const CreateNewsScreen(),
+        return StreamBuilder<Map<String, dynamic>?>(
+          stream: AuthService.instance
+              .currentUserDocStream()
+              .map((doc) => doc.data()),
+          builder: (context, userSnapshot) {
+            if (userSnapshot.connectionState == ConnectionState.waiting) {
+              return const Scaffold(
+                body: Center(
+                  child: CircularProgressIndicator(),
                 ),
-              if (appState.isAdmin)
-                optionTile(
-                  context: context, 
-                  title: 'Estadístcas', 
-                  icon: Icons.bar_chart_rounded, 
-                  page: const StatsScreen()
+              );
+            }
+
+            final userData = userSnapshot.data ?? {};
+            final String name = userData['name'] ?? 'Usuario';
+            final String lastName = userData['lastName'] ?? '';
+            final String email = userData['email'] ?? firebaseUser.email ?? '';
+            final bool isAdmin = userData['isAdmin'] ?? false;
+
+            final String fullName = '$name $lastName'.trim();
+
+            return StreamBuilder<List<Map<String, dynamic>>>(
+              stream: NotificationService.instance.getNotifications(firebaseUser.uid),
+              builder: (context, notificationSnapshot) {
+                final unreadCount = (notificationSnapshot.data ?? [])
+                    .where((item) => item['isRead'] == false)
+                    .length;
+
+                return Scaffold(
+                  appBar: AppBar(
+                    title: const Text('Perfil'),
+                    actions: [
+                      if (unreadCount > 0)
+                        Padding(
+                          padding: const EdgeInsets.only(right: 16),
+                          child: Center(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.redAccent,
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(
+                                unreadCount > 9 ? '9+' : '$unreadCount',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
-              const SizedBox(height: 20),
-              FilledButton.tonal(
-                onPressed: () {
-                  AppState.instance.logout();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Sesión cerrada')),
-                  );
-                },
-                child: const Text('Cerrar sesión'),
-              ),
-            ],
-          ),
+                  body: ListView(
+                    padding: const EdgeInsets.all(20),
+                    children: [
+                      const SizedBox(height: 10),
+                      CircleAvatar(
+                        radius: 52,
+                        backgroundColor: Colors.green.shade50,
+                        child: Icon(
+                          isAdmin ? Icons.admin_panel_settings_rounded : Icons.person_rounded,
+                          size: 42,
+                          color: Colors.green,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        fullName.isEmpty ? 'Usuario' : fullName,
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        email,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: Colors.black54),
+                      ),
+                      const SizedBox(height: 10),
+                      Center(
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 250),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            color: isAdmin
+                                ? Colors.green.shade100
+                                : Colors.grey.shade200,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            isAdmin ? 'Administrador' : 'Usuario',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: isAdmin ? Colors.green.shade800 : Colors.black87,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      optionTile(
+                        context: context,
+                        title: 'Mis eventos',
+                        icon: Icons.event_note_rounded,
+                        page: const MyEventsScreen(),
+                      ),
+                      optionTile(
+                        context: context,
+                        title: 'Crear evento',
+                        icon: Icons.add_circle_outline_rounded,
+                        page: const CreateEventScreen(),
+                      ),
+                      optionTile(
+                        context: context,
+                        title: 'Noticias',
+                        icon: Icons.newspaper_outlined,
+                        page: const NewsScreen(),
+                      ),
+                      if (isAdmin)
+                        optionTile(
+                          context: context,
+                          title: 'Crear noticia',
+                          icon: Icons.campaign_outlined,
+                          page: const CreateNewsScreen(),
+                        ),
+                      if (isAdmin)
+                        optionTile(
+                          context: context,
+                          title: 'Estadísticas',
+                          icon: Icons.bar_chart_rounded,
+                          page: const StatsScreen(),
+                        ),
+                      const SizedBox(height: 20),
+                      FilledButton.tonal(
+                        onPressed: () async {
+                          await AuthService.instance.logout();
+
+                          if (!context.mounted) return;
+
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Sesión cerrada')),
+                          );
+                        },
+                        child: const Text('Cerrar sesión'),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            );
+          },
         );
       },
     );

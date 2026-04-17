@@ -1,7 +1,11 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../../data/app_state.dart';
-import '../../models/event_model.dart';
+
+import '../../services/auth_service.dart';
+import '../../services/event_service.dart';
+import '../../services/notification_service.dart';
+import '../../widgets/global_loading_overlay.dart';
 import '../../widgets/primary_button.dart';
 
 class CreateEventScreen extends StatefulWidget {
@@ -36,6 +40,16 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
   bool isFree = true;
   bool isLoading = false;
   AutovalidateMode autoValidateMode = AutovalidateMode.disabled;
+
+  @override
+  void dispose() {
+    titleController.dispose();
+    dateController.dispose();
+    timeController.dispose();
+    locationController.dispose();
+    descriptionController.dispose();
+    super.dispose();
+  }
 
   String categoryImage(String category) {
     switch (category) {
@@ -121,36 +135,66 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
       return;
     }
 
+    final firebaseUser = FirebaseAuth.instance.currentUser;
+    if (firebaseUser == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Debes iniciar sesión')),
+      );
+      return;
+    }
+
     setState(() => isLoading = true);
-    await Future.delayed(const Duration(milliseconds: 800));
-
-    final event = EventModel(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      title: titleController.text.trim(),
-      date: dateController.text.trim(),
-      time: timeController.text.trim(),
-      location: locationController.text.trim(),
-      description: descriptionController.text.trim().isEmpty
-          ? 'Evento creado desde Eventia.'
-          : descriptionController.text.trim(),
-      category: selectedCategory,
-      isFree: isFree,
-      distance: '0 km',
-      organizer: AppState.instance.userName,
-      filterTag: getFilterTagFromDate(selectedDate!),
-      imageUrl: categoryImage(selectedCategory),
+    GlobalLoadingOverlay.show(
+      context,
+      message: 'Publicando evento...',
     );
 
-    AppState.instance.createEvent(event);
+    try {
+      final userData = await AuthService.instance.getCurrentUserData();
+      final organizerName =
+          '${userData?['name'] ?? ''} ${userData?['lastName'] ?? ''}'.trim();
 
-    if (!mounted) return;
-    setState(() => isLoading = false);
+      await EventService.instance.createEvent(
+        title: titleController.text.trim(),
+        date: dateController.text.trim(),
+        time: timeController.text.trim(),
+        location: locationController.text.trim(),
+        description: descriptionController.text.trim(),
+        category: selectedCategory,
+        isFree: isFree,
+        distance: '0 km',
+        organizerName: organizerName.isEmpty ? 'Eventia' : organizerName,
+        organizerId: firebaseUser.uid,
+        filterTag: getFilterTagFromDate(selectedDate!),
+        imageUrl: categoryImage(selectedCategory),
+      );
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Evento creado correctamente')),
-    );
+      if (!mounted) return;
+      GlobalLoadingOverlay.hide(context);
 
-    Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Evento creado correctamente')),
+      );
+
+      Navigator.pop(context);
+
+      NotificationService.instance.notifyAllUsers(
+        title: 'Nuevo evento disponible',
+        message: '${titleController.text.trim()} ya fue publicado en Eventia.',
+        excludeUserId: firebaseUser.uid,
+      );
+    } catch (_) {
+      if (!mounted) return;
+      GlobalLoadingOverlay.hide(context);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No se pudo crear el evento')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => isLoading = false);
+      }
+    }
   }
 
   Widget sectionTitle(String text) {
@@ -211,24 +255,32 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
-          Container(
-            height: 220,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(24),
-              color: Colors.grey.shade200,
-            ),
-            clipBehavior: Clip.antiAlias,
-            child: Image.network(
-              imageUrl,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) {
-                return Container(
-                  color: Colors.green.shade50,
-                  child: const Center(
-                    child: Icon(Icons.image_outlined, color: Colors.green, size: 50),
-                  ),
-                );
-              },
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 350),
+            child: Container(
+              key: ValueKey(selectedCategory),
+              height: 220,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(24),
+                color: Colors.grey.shade200,
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: Image.network(
+                imageUrl,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    color: Colors.green.shade50,
+                    child: const Center(
+                      child: Icon(
+                        Icons.image_outlined,
+                        color: Colors.green,
+                        size: 50,
+                      ),
+                    ),
+                  );
+                },
+              ),
             ),
           ),
           const SizedBox(height: 20),
@@ -288,7 +340,7 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
                   ),
                   items: categories
                       .map(
-                        (e) => DropdownMenuItem(
+                        (e) => DropdownMenuItem<String>(
                           value: e,
                           child: Text(e),
                         ),

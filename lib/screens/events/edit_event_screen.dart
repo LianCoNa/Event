@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../../app/constants.dart';
-import '../../data/app_state.dart';
 import '../../models/event_model.dart';
+import '../../services/event_service.dart';
 import '../../widgets/primary_button.dart';
 
 class EditEventScreen extends StatefulWidget {
@@ -18,11 +17,12 @@ class EditEventScreen extends StatefulWidget {
 }
 
 class _EditEventScreenState extends State<EditEventScreen> {
-  late TextEditingController titleController;
-  late TextEditingController dateController;
-  late TextEditingController timeController;
-  late TextEditingController locationController;
-  late TextEditingController descriptionController;
+  final _formKey = GlobalKey<FormState>();
+  late final TextEditingController titleController;
+  late final TextEditingController dateController;
+  late final TextEditingController timeController;
+  late final TextEditingController locationController;
+  late final TextEditingController descriptionController;
 
   final List<String> categories = const [
     'Música',
@@ -39,6 +39,8 @@ class _EditEventScreenState extends State<EditEventScreen> {
   TimeOfDay? selectedTime;
   late String selectedCategory;
   late bool isFree;
+  bool isLoading = false;
+  AutovalidateMode autoValidateMode = AutovalidateMode.disabled;
 
   @override
   void initState() {
@@ -50,6 +52,16 @@ class _EditEventScreenState extends State<EditEventScreen> {
     descriptionController = TextEditingController(text: widget.event.description);
     selectedCategory = widget.event.category;
     isFree = widget.event.isFree;
+  }
+
+  @override
+  void dispose() {
+    titleController.dispose();
+    dateController.dispose();
+    timeController.dispose();
+    locationController.dispose();
+    descriptionController.dispose();
+    super.dispose();
   }
 
   String categoryImage(String category) {
@@ -109,41 +121,81 @@ class _EditEventScreenState extends State<EditEventScreen> {
     }
   }
 
-  String getFilterTagFromDate(DateTime date) {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final eventDay = DateTime(date.year, date.month, date.day);
-
-    if (eventDay == today) return 'Hoy';
-
-    final difference = eventDay.difference(today).inDays;
-    if (difference >= 0 && difference <= 7) return 'Esta semana';
-
+  String getFilterTagFromDateText(String text) {
     return 'Este mes';
   }
 
-  void saveChanges() {
-    final updated = widget.event.copyWith(
-      title: titleController.text.trim(),
-      date: dateController.text.trim(),
-      time: timeController.text.trim(),
-      location: locationController.text.trim(),
-      description: descriptionController.text.trim(),
-      category: selectedCategory,
-      isFree: isFree,
-      filterTag: selectedDate != null
-          ? getFilterTagFromDate(selectedDate!)
-          : widget.event.filterTag,
-      imageUrl: categoryImage(selectedCategory),
+  Future<void> saveChanges() async {
+    if (!_formKey.currentState!.validate()) {
+      setState(() {
+        autoValidateMode = AutovalidateMode.onUserInteraction;
+      });
+      return;
+    }
+
+    setState(() => isLoading = true);
+
+    try {
+      await EventService.instance.updateEvent(
+        eventId: widget.event.id,
+        title: titleController.text.trim(),
+        date: dateController.text.trim(),
+        time: timeController.text.trim(),
+        location: locationController.text.trim(),
+        description: descriptionController.text.trim(),
+        category: selectedCategory,
+        isFree: isFree,
+        filterTag: getFilterTagFromDateText(dateController.text.trim()),
+        imageUrl: categoryImage(selectedCategory),
+      );
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Evento actualizado')),
+      );
+
+      Navigator.pop(context);
+    } catch (_) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No se pudo actualizar el evento')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => isLoading = false);
+      }
+    }
+  }
+
+  Widget pickerField({
+    required String hint,
+    required TextEditingController controller,
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(18),
+      onTap: onTap,
+      child: IgnorePointer(
+        child: TextFormField(
+          controller: controller,
+          readOnly: true,
+          decoration: InputDecoration(
+            hintText: hint,
+            prefixIcon: Icon(icon),
+            suffixIcon: const Icon(Icons.keyboard_arrow_down_rounded),
+          ),
+          validator: (value) {
+            if (value == null || value.trim().isEmpty) {
+              return 'Campo obligatorio';
+            }
+            return null;
+          },
+        ),
+      ),
     );
-
-    AppState.instance.updateEvent(updated);
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Evento actualizado')),
-    );
-
-    Navigator.pop(context);
   }
 
   @override
@@ -165,93 +217,122 @@ class _EditEventScreenState extends State<EditEventScreen> {
             child: Image.network(
               imageUrl,
               fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) {
+                return Container(
+                  color: Colors.green.shade50,
+                  child: const Center(
+                    child: Icon(Icons.image_outlined, color: Colors.green, size: 50),
+                  ),
+                );
+              },
             ),
           ),
           const SizedBox(height: 20),
-          TextField(
-            controller: titleController,
-            decoration: const InputDecoration(
-              hintText: 'Nombre del evento',
-              prefixIcon: Icon(Icons.event_outlined),
-            ),
-          ),
-          const SizedBox(height: 14),
-          TextField(
-            controller: dateController,
-            readOnly: true,
-            onTap: pickDate,
-            decoration: const InputDecoration(
-              hintText: 'Fecha',
-              prefixIcon: Icon(Icons.calendar_month_outlined),
-            ),
-          ),
-          const SizedBox(height: 14),
-          TextField(
-            controller: timeController,
-            readOnly: true,
-            onTap: pickTime,
-            decoration: const InputDecoration(
-              hintText: 'Hora',
-              prefixIcon: Icon(Icons.access_time_outlined),
-            ),
-          ),
-          const SizedBox(height: 14),
-          TextField(
-            controller: locationController,
-            decoration: const InputDecoration(
-              hintText: 'Ubicación',
-              prefixIcon: Icon(Icons.location_on_outlined),
-            ),
-          ),
-          const SizedBox(height: 14),
-          DropdownButtonFormField<String>(
-            value: selectedCategory,
-            decoration: const InputDecoration(
-              prefixIcon: Icon(Icons.grid_view_rounded),
-            ),
-            items: categories
-                .map(
-                  (e) => DropdownMenuItem(
-                    value: e,
-                    child: Text(e),
+          Form(
+            key: _formKey,
+            autovalidateMode: autoValidateMode,
+            child: Column(
+              children: [
+                TextFormField(
+                  controller: titleController,
+                  decoration: const InputDecoration(
+                    hintText: 'Nombre del evento',
+                    prefixIcon: Icon(Icons.event_outlined),
                   ),
-                )
-                .toList(),
-            onChanged: (value) {
-              if (value != null) {
-                setState(() {
-                  selectedCategory = value;
-                });
-              }
-            },
-          ),
-          const SizedBox(height: 14),
-          SwitchListTile(
-            value: isFree,
-            onChanged: (value) {
-              setState(() {
-                isFree = value;
-              });
-            },
-            title: const Text('Evento gratis'),
-            activeColor: AppColors.primary,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(18),
-            ),
-            tileColor: Colors.white,
-          ),
-          const SizedBox(height: 14),
-          TextField(
-            controller: descriptionController,
-            maxLines: 5,
-            decoration: const InputDecoration(
-              hintText: 'Descripción',
-              prefixIcon: Icon(Icons.description_outlined),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Ingresa el nombre del evento';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 14),
+                pickerField(
+                  hint: 'Selecciona la fecha',
+                  controller: dateController,
+                  icon: Icons.calendar_month_outlined,
+                  onTap: pickDate,
+                ),
+                const SizedBox(height: 14),
+                pickerField(
+                  hint: 'Selecciona la hora',
+                  controller: timeController,
+                  icon: Icons.access_time_outlined,
+                  onTap: pickTime,
+                ),
+                const SizedBox(height: 14),
+                TextFormField(
+                  controller: locationController,
+                  decoration: const InputDecoration(
+                    hintText: 'Ubicación',
+                    prefixIcon: Icon(Icons.location_on_outlined),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Ingresa la ubicación';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 14),
+                DropdownButtonFormField<String>(
+                  initialValue: selectedCategory,
+                  decoration: const InputDecoration(
+                    prefixIcon: Icon(Icons.grid_view_rounded),
+                  ),
+                  items: categories
+                      .map(
+                        (e) => DropdownMenuItem(
+                          value: e,
+                          child: Text(e),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (value) {
+                    if (value != null) {
+                      setState(() {
+                        selectedCategory = value;
+                      });
+                    }
+                  },
+                ),
+                const SizedBox(height: 14),
+                SwitchListTile(
+                  value: isFree,
+                  onChanged: (value) {
+                    setState(() {
+                      isFree = value;
+                    });
+                  },
+                  title: Text(isFree ? 'Evento gratis' : 'Evento pago'),
+                  activeThumbColor: Colors.green,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  tileColor: Colors.white,
+                ),
+                const SizedBox(height: 14),
+                TextFormField(
+                  controller: descriptionController,
+                  maxLines: 5,
+                  decoration: const InputDecoration(
+                    hintText: 'Descripción',
+                    prefixIcon: Icon(Icons.description_outlined),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Ingresa una descripción';
+                    }
+                    return null;
+                  },
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 20),
           PrimaryButton(
             text: 'Guardar cambios',
+            isLoading: isLoading,
             onPressed: saveChanges,
           ),
         ],

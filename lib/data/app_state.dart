@@ -1,85 +1,59 @@
 import 'package:flutter/material.dart';
 import '../models/event_model.dart';
-import '../models/news_model.dart';
 import '../models/notification_model.dart';
-import 'mock_data.dart';
-
-class AppUser {
-  final String id;
-  final String name;
-  final String lastName;
-  final String email;
-  final String phone;
-  final String password;
-  final bool isAdmin;
-
-  AppUser({
-    required this.id,
-    required this.name,
-    required this.lastName,
-    required this.email,
-    required this.phone,
-    required this.password,
-    this.isAdmin = false,
-  });
-
-  String get fullName => '$name $lastName';
-}
 
 class AppState extends ChangeNotifier {
   AppState._();
   static final AppState instance = AppState._();
 
-  static const String adminEmail = 'admin@eventia.com';
-  static const String adminPassword = 'Admin123';
-  static const String demoUserEmail = 'demo@eventia.com';
-  static const String demoUserPassword = '123456';
-
-  bool _isLoggedIn = false;
-  AppUser? _currentUser;
-
-  final List<AppUser> _users = [
-    AppUser(
-      id: 'admin-1',
-      name: 'Admin',
-      lastName: 'Eventia',
-      email: adminEmail,
-      phone: '0000000000',
-      password: adminPassword,
-      isAdmin: true,
-    ),
-    AppUser(
-      id: 'demo-1',
-      name: 'Usuario',
-      lastName: 'Demo',
-      email: demoUserEmail,
-      phone: '3000000000',
-      password: demoUserPassword,
-    ),
-  ];
-
-  final List<EventModel> _allEvents = [...initialMockEvents];
+  final List<EventModel> _allEvents = [];
   final List<EventModel> _myTickets = [];
   final List<EventModel> _myCreatedEvents = [];
-  final List<NotificationModel> _notifications = [...initialNotifications];
+  final List<NotificationModel> _notifications = [];
   final List<Map<String, dynamic>> _surveys = [];
-  final List<NewsModel> _news = [...initialNews];
+  final List<Map<String, dynamic>> _news = [];
+
+  bool _isLoggedIn = false;
+  bool _isAdmin = false;
+  String _userName = 'Invitado';
+  String _userEmail = '';
 
   bool get isLoggedIn => _isLoggedIn;
-  bool get isAdmin => _currentUser?.isAdmin ?? false;
-  String get userName => _currentUser?.fullName ?? 'Invitado';
-  String get userEmail => _currentUser?.email ?? '';
+  bool get isAdmin => _isAdmin;
+  String get userName => _userName;
+  String get userEmail => _userEmail;
 
-  List<AppUser> get users => List.unmodifiable(_users);
   List<EventModel> get allEvents => List.unmodifiable(_allEvents);
   List<EventModel> get myTickets => List.unmodifiable(_myTickets);
   List<EventModel> get myCreatedEvents => List.unmodifiable(_myCreatedEvents);
   List<NotificationModel> get notifications => List.unmodifiable(_notifications);
   List<Map<String, dynamic>> get surveys => List.unmodifiable(_surveys);
-  List<NewsModel> get news => List.unmodifiable(_news);
+  List<Map<String, dynamic>> get news => List.unmodifiable(_news);
 
   int get unreadNotificationsCount =>
       _notifications.where((item) => !item.isRead).length;
+
+  void loginUser({
+    String name = 'Usuario',
+    String email = '',
+    bool isAdmin = false,
+  }) {
+    _isLoggedIn = true;
+    _isAdmin = isAdmin;
+    _userName = name;
+    _userEmail = email;
+    notifyListeners();
+  }
+
+  void logout() {
+    _isLoggedIn = false;
+    _isAdmin = false;
+    _userName = 'Invitado';
+    _userEmail = '';
+    _myTickets.clear();
+    _notifications.clear();
+    notifyListeners();
+  }
 
   bool registerUser({
     required String name,
@@ -88,28 +62,10 @@ class AppState extends ChangeNotifier {
     required String phone,
     required String password,
   }) {
-    final normalizedEmail = email.trim().toLowerCase();
-
-    final exists = _users.any((u) => u.email.toLowerCase() == normalizedEmail);
-    if (exists) return false;
-
-    final user = AppUser(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      name: name.trim(),
-      lastName: lastName.trim(),
-      email: normalizedEmail,
-      phone: phone.trim(),
-      password: password.trim(),
-    );
-
-    _users.add(user);
     _isLoggedIn = true;
-    _currentUser = user;
-    _notifications.clear();
-    _pushNotification(
-      title: 'Bienvenido a Eventia',
-      message: 'Tu cuenta fue creada correctamente.',
-    );
+    _isAdmin = false;
+    _userName = '$name $lastName'.trim();
+    _userEmail = email;
     notifyListeners();
     return true;
   }
@@ -118,53 +74,24 @@ class AppState extends ChangeNotifier {
     required String email,
     required String password,
   }) {
-    final normalizedEmail = email.trim().toLowerCase();
-    final normalizedPassword = password.trim();
-
-    try {
-      final user = _users.firstWhere(
-        (u) =>
-            u.email.toLowerCase() == normalizedEmail &&
-            u.password == normalizedPassword,
-      );
-
-      _isLoggedIn = true;
-      _currentUser = user;
-      _notifications.clear();
-      _pushNotification(
-        title: 'Sesión iniciada',
-        message: 'Hola ${user.fullName}, bienvenido de nuevo.',
-      );
-      notifyListeners();
-      return true;
-    } catch (_) {
-      return false;
-    }
-  }
-
-  void logout() {
-    _isLoggedIn = false;
-    _currentUser = null;
-    _myTickets.clear();
-    _notifications.clear();
+    _isLoggedIn = true;
+    _isAdmin = false;
+    _userEmail = email;
+    _userName = 'Usuario';
     notifyListeners();
+    return true;
   }
 
-  void _pushNotification({
-    required String title,
-    required String message,
+  bool loginAdmin({
+    required String email,
+    required String password,
   }) {
-    if (!_isLoggedIn) return;
-
-    _notifications.insert(
-      0,
-      NotificationModel(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        title: title,
-        message: message,
-        time: 'Ahora',
-      ),
-    );
+    _isLoggedIn = true;
+    _isAdmin = true;
+    _userEmail = email;
+    _userName = 'Administrador';
+    notifyListeners();
+    return true;
   }
 
   bool isRegisteredToEvent(String eventId) {
@@ -172,57 +99,28 @@ class AppState extends ChangeNotifier {
   }
 
   void registerToEvent(EventModel event) {
-    if (!_isLoggedIn) return;
-
     final exists = _myTickets.any((item) => item.id == event.id);
     if (!exists) {
       _myTickets.add(event);
-      _pushNotification(
-        title: 'Registro confirmado',
-        message: 'Te registraste en ${event.title}.',
-      );
       notifyListeners();
     }
   }
 
   void removeTicket(String eventId) {
-    final removedEvent = _myTickets.where((e) => e.id == eventId).toList();
     _myTickets.removeWhere((event) => event.id == eventId);
-
-    if (removedEvent.isNotEmpty) {
-      _pushNotification(
-        title: 'Registro cancelado',
-        message: 'Eliminaste tu asistencia a ${removedEvent.first.title}.',
-      );
-    }
-
     notifyListeners();
   }
 
   void createEvent(EventModel event) {
     _allEvents.insert(0, event);
     _myCreatedEvents.insert(0, event);
-    _pushNotification(
-      title: 'Evento creado',
-      message: 'Tu evento ${event.title} fue publicado correctamente.',
-    );
     notifyListeners();
   }
 
   void deleteCreatedEvent(String eventId) {
-    final removed = _allEvents.where((event) => event.id == eventId).toList();
-
     _myCreatedEvents.removeWhere((event) => event.id == eventId);
     _allEvents.removeWhere((event) => event.id == eventId);
     _myTickets.removeWhere((event) => event.id == eventId);
-
-    if (removed.isNotEmpty) {
-      _pushNotification(
-        title: 'Evento eliminado',
-        message: 'El evento ${removed.first.title} fue eliminado.',
-      );
-    }
-
     notifyListeners();
   }
 
@@ -238,10 +136,6 @@ class AppState extends ChangeNotifier {
         _myTickets.indexWhere((event) => event.id == updatedEvent.id);
     if (ticketIndex != -1) _myTickets[ticketIndex] = updatedEvent;
 
-    _pushNotification(
-      title: 'Evento actualizado',
-      message: 'Se actualizaron los datos de ${updatedEvent.title}.',
-    );
     notifyListeners();
   }
 
@@ -254,23 +148,12 @@ class AppState extends ChangeNotifier {
       'wouldHireAgain': wouldHireAgain ? 'Sí' : 'No',
       'rating': rating,
       'improvement': improvement,
-      'date': DateTime.now().toIso8601String(),
-      'user': userName,
     });
-
-    _pushNotification(
-      title: 'Encuesta enviada',
-      message: 'Gracias por compartir tu opinión.',
-    );
     notifyListeners();
   }
 
-  void addNews(NewsModel newsItem) {
+  void addNews(Map<String, dynamic> newsItem) {
     _news.insert(0, newsItem);
-    _pushNotification(
-      title: 'Nueva noticia publicada',
-      message: newsItem.title,
-    );
     notifyListeners();
   }
 

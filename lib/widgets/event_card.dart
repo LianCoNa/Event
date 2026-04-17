@@ -1,77 +1,63 @@
 import 'package:flutter/material.dart';
-import '../app/constants.dart';
 import '../models/event_model.dart';
 
 class EventCard extends StatelessWidget {
   final EventModel event;
   final VoidCallback onTap;
-  final VoidCallback? onRegister;
-  final String? actionText;
+  final VoidCallback onRegister;
+  final String actionText;
 
   const EventCard({
     super.key,
     required this.event,
     required this.onTap,
-    this.onRegister,
-    this.actionText,
+    required this.onRegister,
+    required this.actionText,
   });
-
-  Color categoryColor(String category) {
-    switch (category) {
-      case 'Música':
-        return const Color(0xFF43A047);
-      case 'Tecnología':
-        return const Color(0xFF00897B);
-      case 'Negocios':
-        return const Color(0xFF2E7D32);
-      case 'Diseño':
-        return const Color(0xFF6A1B9A);
-      case 'Arte':
-        return const Color(0xFFD81B60);
-      case 'Gastronomía':
-        return const Color(0xFFE65100);
-      case 'Deportes':
-        return const Color(0xFF1565C0);
-      default:
-        return AppColors.primary;
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
-    final tagColor = categoryColor(event.category);
+    final badgeColor = event.isFree ? Colors.green : Colors.deepOrange;
 
-    return InkWell(
-      borderRadius: BorderRadius.circular(26),
+    return GestureDetector(
       onTap: onTap,
-      child: Card(
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                height: 210,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 240),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(26),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 16,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ClipRRect(
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(26),
+              ),
+              child: SizedBox(
+                height: 190,
                 width: double.infinity,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(22),
-                  color: Colors.grey.shade200,
-                ),
-                clipBehavior: Clip.antiAlias,
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
                     Image.network(
                       event.imageUrl,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) {
+                      errorBuilder: (context, error, stackTrace) {
                         return Container(
-                          color: AppColors.softGreen,
+                          color: Colors.green.shade50,
                           child: const Center(
                             child: Icon(
                               Icons.image_outlined,
-                              size: 48,
-                              color: AppColors.primary,
+                              color: Colors.green,
+                              size: 40,
                             ),
                           ),
                         );
@@ -81,8 +67,8 @@ class EventCard extends StatelessWidget {
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: [
-                            Colors.black.withOpacity(0.05),
-                            Colors.black.withOpacity(0.55),
+                            Colors.black.withValues(alpha: 0.05),
+                            Colors.black.withValues(alpha: 0.55),
                           ],
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
@@ -100,16 +86,15 @@ class EventCard extends StatelessWidget {
                               vertical: 7,
                             ),
                             decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(.95),
-                              borderRadius: BorderRadius.circular(18),
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(20),
                             ),
                             child: Text(
                               event.isFree ? 'GRATIS' : 'PAGO',
                               style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: event.isFree
-                                    ? AppColors.primary
-                                    : Colors.deepOrange,
+                                color: badgeColor,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 12,
                               ),
                             ),
                           ),
@@ -120,14 +105,15 @@ class EventCard extends StatelessWidget {
                               vertical: 7,
                             ),
                             decoration: BoxDecoration(
-                              color: tagColor.withOpacity(.92),
-                              borderRadius: BorderRadius.circular(18),
+                              color: Colors.green.withValues(alpha: 0.92),
+                              borderRadius: BorderRadius.circular(20),
                             ),
                             child: Text(
                               event.category,
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.w700,
+                                fontSize: 12,
                               ),
                             ),
                           ),
@@ -135,73 +121,112 @@ class EventCard extends StatelessWidget {
                       ),
                     ),
                     Positioned(
-                      left: 16,
-                      right: 16,
-                      bottom: 16,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            event.title,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleLarge
-                                ?.copyWith(
-                                  color: Colors.white,
-                                  fontSize: 24,
-                                ),
+                      right: 14,
+                      bottom: 14,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 7,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.92),
+                          borderRadius: BorderRadius.circular(18),
+                        ),
+                        child: Text(
+                          event.filterTag,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 12,
+                            color: Colors.black87,
                           ),
-                          const SizedBox(height: 6),
-                          Text(
-                            '${event.date} • ${event.time}',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
+                        ),
                       ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 14),
-              Row(
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 18, 18, 8),
+              child: Text(
+                event.title,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontSize: 19,
+                    ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 18),
+              child: Row(
                 children: [
-                  const Icon(
-                    Icons.location_on_rounded,
-                    size: 18,
-                    color: AppColors.primary,
-                  ),
-                  const SizedBox(width: 6),
+                  const Icon(Icons.calendar_today_rounded,
+                      size: 16, color: Colors.green),
+                  const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      '${event.location} • ${event.distance}',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: AppColors.darkText,
-                          ),
+                      '${event.date} • ${event.time}',
+                      style: Theme.of(context).textTheme.bodyMedium,
                     ),
                   ),
-                  if (onRegister != null)
-                    FilledButton(
-                      onPressed: onRegister,
-                      style: FilledButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 18,
-                          vertical: 10,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                      ),
-                      child: Text(actionText ?? 'Registrarte'),
-                    ),
                 ],
               ),
-            ],
-          ),
+            ),
+            const SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 18),
+              child: Row(
+                children: [
+                  const Icon(Icons.location_on_rounded,
+                      size: 16, color: Colors.green),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      event.location,
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 18),
+              child: Row(
+                children: [
+                  const Icon(Icons.person_outline_rounded,
+                      size: 16, color: Colors.green),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      event.organizer,
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 0, 18, 18),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: onTap,
+                      child: const Text('Ver detalle'),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: FilledButton(
+                      onPressed: onRegister,
+                      child: Text(actionText),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );

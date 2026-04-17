@@ -1,6 +1,8 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import '../../data/app_state.dart';
-import '../../models/news_model.dart';
+import '../../services/news_service.dart';
+import '../../services/notification_service.dart';
+import '../../widgets/global_loading_overlay.dart';
 import '../../widgets/primary_button.dart';
 
 class CreateNewsScreen extends StatefulWidget {
@@ -18,28 +20,67 @@ class _CreateNewsScreenState extends State<CreateNewsScreen> {
 
   bool isLoading = false;
 
+  @override
+  void dispose() {
+    titleController.dispose();
+    descriptionController.dispose();
+    tagController.dispose();
+    super.dispose();
+  }
+
   Future<void> saveNews() async {
     if (!_formKey.currentState!.validate()) return;
 
-    setState(() => isLoading = true);
-    await Future.delayed(const Duration(milliseconds: 700));
+    final firebaseUser = FirebaseAuth.instance.currentUser;
+    if (firebaseUser == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Debes iniciar sesión')),
+      );
+      return;
+    }
 
-    AppState.instance.addNews(
-      NewsModel(
+    setState(() => isLoading = true);
+    GlobalLoadingOverlay.show(
+      context,
+      message: 'Estamos publicando la noticia...',
+    );
+
+    try {
+      await NewsService.instance.createNews(
         title: titleController.text.trim(),
         description: descriptionController.text.trim(),
-        tag: tagController.text.trim().isEmpty ? 'General' : tagController.text.trim(),
-      ),
-    );
+        tag: tagController.text.trim().isEmpty
+            ? 'General'
+            : tagController.text.trim(),
+        createdBy: firebaseUser.uid,
+      );
 
-    if (!mounted) return;
-    setState(() => isLoading = false);
+      await NotificationService.instance.notifyAllUsers(
+        title: 'Nueva noticia publicada',
+        message: titleController.text.trim(),
+        excludeUserId: firebaseUser.uid,
+      );
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Noticia publicada correctamente')),
-    );
+      if (!mounted) return;
+      GlobalLoadingOverlay.hide(context);
 
-    Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Noticia publicada correctamente')),
+      );
+
+      Navigator.pop(context);
+    } catch (_) {
+      if (!mounted) return;
+      GlobalLoadingOverlay.hide(context);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No se pudo publicar la noticia')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => isLoading = false);
+      }
+    }
   }
 
   @override

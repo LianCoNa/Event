@@ -1,5 +1,6 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import '../../data/app_state.dart';
+import '../../services/auth_service.dart';
 import '../../widgets/primary_button.dart';
 import '../home/main_navigation_screen.dart';
 import 'forgot_password_screen.dart';
@@ -21,6 +22,13 @@ class _LoginScreenState extends State<LoginScreen> {
   bool isLoading = false;
   AutovalidateMode autoValidateMode = AutovalidateMode.disabled;
 
+  @override
+  void dispose() {
+    emailController.dispose();
+    passwordController.dispose();
+    super.dispose();
+  }
+
   Future<void> login() async {
     if (!_formKey.currentState!.validate()) {
       setState(() {
@@ -30,30 +38,50 @@ class _LoginScreenState extends State<LoginScreen> {
     }
 
     setState(() => isLoading = true);
-    await Future.delayed(const Duration(milliseconds: 700));
 
-    final success = AppState.instance.login(
-      email: emailController.text.trim(),
-      password: passwordController.text.trim(),
-    );
-
-    if (!mounted) return;
-    setState(() => isLoading = false);
-
-    if (!success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Correo o contraseña incorrectos')),
+    try {
+      await AuthService.instance.login(
+        email: emailController.text.trim(),
+        password: passwordController.text.trim(),
       );
-      return;
-    }
 
-    Navigator.pushAndRemoveUntil(
-      context,
-      MaterialPageRoute(
-        builder: (_) => const MainNavigationScreen(initialIndex: 0),
-      ),
-      (route) => false,
-    );
+      if (!mounted) return;
+
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const MainNavigationScreen(initialIndex: 0),
+        ),
+        (route) => false,
+      );
+    } on FirebaseAuthException catch (e) {
+      if (!mounted) return;
+
+      String message = 'No se pudo iniciar sesión.';
+      if (e.code == 'user-not-found') {
+        message = 'No existe una cuenta con ese correo.';
+      } else if (e.code == 'wrong-password' || e.code == 'invalid-credential') {
+        message = 'Correo o contraseña incorrectos.';
+      } else if (e.code == 'invalid-email') {
+        message = 'El correo no es válido.';
+      } else if (e.code == 'too-many-requests') {
+        message = 'Demasiados intentos. Intenta más tarde.';
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message)),
+      );
+    } catch (_) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Ocurrió un error inesperado.')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => isLoading = false);
+      }
+    }
   }
 
   @override
@@ -71,7 +99,9 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 20),
                 Text(
                   'Iniciar sesión',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(fontSize: 30),
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontSize: 30,
+                      ),
                 ),
                 const SizedBox(height: 8),
                 Text(
@@ -110,7 +140,9 @@ class _LoginScreenState extends State<LoginScreen> {
                         });
                       },
                       icon: Icon(
-                        obscurePassword ? Icons.visibility_off : Icons.visibility,
+                        obscurePassword
+                            ? Icons.visibility_off
+                            : Icons.visibility,
                       ),
                     ),
                   ),

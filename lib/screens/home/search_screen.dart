@@ -1,6 +1,8 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import '../../data/app_state.dart';
 import '../../models/event_model.dart';
+import '../../services/event_service.dart';
+import '../../services/ticket_service.dart';
 import '../../widgets/event_card.dart';
 import '../../widgets/search_bar_widget.dart';
 import '../auth/login_screen.dart';
@@ -15,24 +17,30 @@ class SearchScreen extends StatefulWidget {
 
 class _SearchScreenState extends State<SearchScreen> {
   final TextEditingController controller = TextEditingController();
-  List<EventModel> results = AppState.instance.allEvents;
+  String query = '';
 
   @override
-  void initState() {
-    super.initState();
-    results = AppState.instance.allEvents;
+  void dispose() {
+    controller.dispose();
+    super.dispose();
   }
 
-  void search(String value) {
-    setState(() {
-      results = AppState.instance.searchEvents(value);
-    });
+  List<EventModel> filterEvents(List<EventModel> events) {
+    final normalized = query.trim().toLowerCase();
+    if (normalized.isEmpty) return events;
+
+    return events.where((event) {
+      return event.title.toLowerCase().contains(normalized) ||
+          event.category.toLowerCase().contains(normalized) ||
+          event.location.toLowerCase().contains(normalized) ||
+          event.organizer.toLowerCase().contains(normalized);
+    }).toList();
   }
 
-  void handleRegister(BuildContext context, EventModel event) {
-    final appState = AppState.instance;
+  Future<void> handleRegister(BuildContext context, EventModel event) async {
+    final firebaseUser = FirebaseAuth.instance.currentUser;
 
-    if (!appState.isLoggedIn) {
+    if (firebaseUser == null) {
       Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => const LoginScreen()),
@@ -40,19 +48,52 @@ class _SearchScreenState extends State<SearchScreen> {
       return;
     }
 
-    if (!appState.isRegisteredToEvent(event.id)) {
-      appState.registerToEvent(event);
+    try {
+      final alreadyRegistered = await TicketService.instance.isRegistered(
+        eventId: event.id,
+        userId: firebaseUser.uid,
+      );
+
+      if (alreadyRegistered) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Ya estás registrado en este evento')),
+        );
+        return;
+      }
+
+      await TicketService.instance.registerToEvent(
+        event: event,
+        userId: firebaseUser.uid,
+      );
+
+      if (!context.mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Te registraste en ${event.title}')),
+      );
+    } catch (_) {
+      if (!context.mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No se pudo registrar la entrada')),
       );
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: AppState.instance,
-      builder: (context, child) {
+    return StreamBuilder<List<EventModel>>(
+      stream: EventService.instance.getEvents(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        final events = snapshot.data ?? [];
+        final results = filterEvents(events);
+
         return Scaffold(
           appBar: AppBar(title: const Text('Buscar eventos')),
           body: ListView(
@@ -61,7 +102,11 @@ class _SearchScreenState extends State<SearchScreen> {
               SearchBarWidget(
                 hintText: 'Busca por nombre, categoría, ubicación...',
                 controller: controller,
-                onChanged: search,
+                onChanged: (value) {
+                  setState(() {
+                    query = value;
+                  });
+                },
               ),
               const SizedBox(height: 20),
               if (results.isEmpty)
@@ -85,9 +130,7 @@ class _SearchScreenState extends State<SearchScreen> {
                       );
                     },
                     onRegister: () => handleRegister(context, event),
-                    actionText: AppState.instance.isRegisteredToEvent(event.id)
-                        ? 'Registrado'
-                        : 'Registrarte',
+                    actionText: 'Registrarte',
                   ),
                 ),
               ),

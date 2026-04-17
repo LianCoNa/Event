@@ -1,5 +1,6 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import '../../data/app_state.dart';
+import '../../services/auth_service.dart';
 import '../../widgets/primary_button.dart';
 import '../home/main_navigation_screen.dart';
 
@@ -25,6 +26,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool isLoading = false;
   AutovalidateMode autoValidateMode = AutovalidateMode.disabled;
 
+  @override
+  void dispose() {
+    nameController.dispose();
+    lastNameController.dispose();
+    emailController.dispose();
+    phoneController.dispose();
+    passwordController.dispose();
+    confirmPasswordController.dispose();
+    super.dispose();
+  }
+
   Future<void> registerUser() async {
     if (!_formKey.currentState!.validate() || !acceptTerms) {
       setState(() {
@@ -33,40 +45,60 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
       if (!acceptTerms) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Debes aceptar los términos y condiciones')),
+          const SnackBar(
+            content: Text('Debes aceptar los términos y condiciones'),
+          ),
         );
       }
       return;
     }
 
     setState(() => isLoading = true);
-    await Future.delayed(const Duration(milliseconds: 800));
 
-    final success = AppState.instance.registerUser(
-      name: nameController.text.trim(),
-      lastName: lastNameController.text.trim(),
-      email: emailController.text.trim(),
-      phone: phoneController.text.trim(),
-      password: passwordController.text.trim(),
-    );
-
-    if (!mounted) return;
-    setState(() => isLoading = false);
-
-    if (!success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Ese correo ya está registrado')),
+    try {
+      await AuthService.instance.register(
+        name: nameController.text.trim(),
+        lastName: lastNameController.text.trim(),
+        email: emailController.text.trim(),
+        phone: phoneController.text.trim(),
+        password: passwordController.text.trim(),
       );
-      return;
-    }
 
-    Navigator.pushAndRemoveUntil(
-      context,
-      MaterialPageRoute(
-        builder: (_) => const MainNavigationScreen(initialIndex: 0),
-      ),
-      (route) => false,
-    );
+      if (!mounted) return;
+
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const MainNavigationScreen(initialIndex: 0),
+        ),
+        (route) => false,
+      );
+    } on FirebaseAuthException catch (e) {
+      if (!mounted) return;
+
+      String message = 'No se pudo registrar la cuenta.';
+      if (e.code == 'email-already-in-use') {
+        message = 'Ese correo ya está registrado.';
+      } else if (e.code == 'invalid-email') {
+        message = 'El correo no es válido.';
+      } else if (e.code == 'weak-password') {
+        message = 'La contraseña es demasiado débil.';
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message)),
+      );
+    } catch (_) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Ocurrió un error inesperado.')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => isLoading = false);
+      }
+    }
   }
 
   @override
@@ -80,7 +112,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
             const SizedBox(height: 10),
             Text(
               'Crear cuenta',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(fontSize: 30),
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontSize: 30,
+                  ),
             ),
             const SizedBox(height: 8),
             Text(
@@ -170,7 +204,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           });
                         },
                         icon: Icon(
-                          obscurePassword ? Icons.visibility_off : Icons.visibility,
+                          obscurePassword
+                              ? Icons.visibility_off
+                              : Icons.visibility,
                         ),
                       ),
                     ),
@@ -194,11 +230,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       suffixIcon: IconButton(
                         onPressed: () {
                           setState(() {
-                            obscureConfirmPassword = !obscureConfirmPassword;
+                            obscureConfirmPassword =
+                                !obscureConfirmPassword;
                           });
                         },
                         icon: Icon(
-                          obscureConfirmPassword ? Icons.visibility_off : Icons.visibility,
+                          obscureConfirmPassword
+                              ? Icons.visibility_off
+                              : Icons.visibility,
                         ),
                       ),
                     ),
@@ -232,7 +271,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     padding: const EdgeInsets.only(top: 12),
                     child: Text(
                       'Acepto los términos y condiciones y el tratamiento de mis datos.',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(height: 1.4),
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            height: 1.4,
+                          ),
                     ),
                   ),
                 ),
